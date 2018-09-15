@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import os
+import time
 
 
 def recognize(video_capture, known_face_encodings, known_face_names):
@@ -55,6 +56,8 @@ def recognize(video_capture, known_face_encodings, known_face_names):
 
 
 def face_search():
+    start_time = time.time()
+
     # Get a reference to webcam #0 (the default one)
     video_capture = cv2.VideoCapture(0)
 
@@ -83,7 +86,7 @@ def face_search():
         print(names)
 
         # Hit 'q' on the keyboard to quit!
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord('q') or time.time() - start_time >= 5:
             break
 
     # Release handle to the webcam
