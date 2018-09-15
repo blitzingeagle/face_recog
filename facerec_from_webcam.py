@@ -1,39 +1,11 @@
 import face_recognition
 import cv2
-
-# Get a reference to webcam #0 (the default one)
-video_capture = cv2.VideoCapture(0)
-
-# Load a sample picture and learn how to recognize it.
-obama_image = face_recognition.load_image_file("datasets/faces/obama.jpg")
-obama_face_encoding = face_recognition.face_encodings(obama_image)[0]
-
-# Load a second sample picture and learn how to recognize it.
-biden_image = face_recognition.load_image_file("datasets/faces/biden.jpg")
-biden_face_encoding = face_recognition.face_encodings(biden_image)[0]
-
-graham_image = face_recognition.load_image_file("datasets/faces/graham_hoyes.jpg")
-graham_face_encoding = face_recognition.face_encodings(graham_image)[0]
-
-kevin_image = face_recognition.load_image_file("datasets/faces/kevin_zhang.jpg")
-kevin_face_encoding = face_recognition.face_encodings(kevin_image)[0]
-
-# Create arrays of known face encodings and their names
-known_face_encodings = [
-    obama_face_encoding,
-    biden_face_encoding,
-    graham_face_encoding,
-    kevin_face_encoding
-]
-known_face_names = [
-    "Barack Obama",
-    "Joe Biden",
-    "Graham Hoyes",
-    "Kevin Zhang"
-]
+import numpy as np
+import pandas as pd
+import os
 
 
-def recognize():
+def recognize(video_capture, known_face_encodings, known_face_names):
     # Grab a single frame of video
     ret, frame = video_capture.read()
 
@@ -82,14 +54,47 @@ def recognize():
     return face_names
 
 
-while True:
-    name = recognize()
-    print(name)
+def face_search():
+    # Get a reference to webcam #0 (the default one)
+    video_capture = cv2.VideoCapture(0)
 
-    # Hit 'q' on the keyboard to quit!
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    df = pd.read_csv("datasets/labels.csv", delimiter=',')
+
+    known_face_encodings = []
+    known_face_names = []
+
+    for basename, label in df.values:
+        if os.path.isfile("datasets/vectorized/%s.npy" % basename):
+            face_encoding = np.load("datasets/vectorized/%s.npy" % basename)
+            print("Loaded", basename)
+        else:
+            image = face_recognition.load_image_file("datasets/raw/%s.jpg" % basename)
+            face_encoding = face_recognition.face_encodings(image)[0]
+            np.save("datasets/vectorized/%s.npy" % basename, face_encoding)
+
+        known_face_encodings.append(face_encoding)
+        known_face_names.append(label)
+
+
+    names = []
+
+    while len(names) == 0:
+        names = recognize(video_capture, known_face_encodings, known_face_names)
+        print(names)
+
+        # Hit 'q' on the keyboard to quit!
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # Release handle to the webcam
+    video_capture.release()
+
+    return names
+
+while True:
+    face_search()
+    if cv2.waitKey(1) == ord('q'):
         break
 
-# Release handle to the webcam
-video_capture.release()
 cv2.destroyAllWindows()
+
